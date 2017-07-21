@@ -1,0 +1,57 @@
+#! /bin/bash
+#
+# A script for removing email addresses from CSV file of users
+# exported from website/database
+
+
+OPTIND=1   # Reset in case getopts has already been used in the shell.
+emailListFile=$1
+doNotEmailList=$2
+
+# Get arguments
+while getopts "h?" opt; do
+    case $opt in
+        h)
+            printf "USAGE: [Basefile.csv] [subtractfile.txt] >> [outfile.csv]\n"
+            printf "\nHELP:\nThis script outputs a list of email addresses from"
+            printf " the basefile.csv that are not contained in subtractfile.txt."
+            printf "\n\nUse the >> indicator to redirect the output into a file"
+            printf " use. NOTE: basefile.csv should have the emails stored in "
+            printf "column 13.\n"
+            exit 1
+            ;;
+        \?)
+            printf "USAGE: [Basefile.csv] [subtractfile.txt] >> [outfile.csv]\n"
+            printf "Use -h for help.\n"
+            exit 1
+            ;;
+    esac
+done
+
+
+# do some funky stuff to read the output into an array
+# Why? because MacOS only hase bash 3.2, not 4.
+# SO NO. I CAN'T IMPLEMENT "mapfile" or "readarray".
+#IFS=$'\n'
+set -f
+# Takes and splits the CSV file to retrieve the email column
+emailArray=( $(cut -d , -f 13 $emailListFile) )
+
+# Read the do not email list into an array
+doNotEmail=( $(cat $doNotEmailList))
+
+for email in ${emailArray[@]}; do
+    found=1
+    for badEmail in ${doNotEmail[@]}; do
+        if [ $email == $badEmail ]; then
+            found=0
+        fi
+    done
+    if [ $found == 1 ] && [[ $email == *"@"* ]]; then
+        outArray+=($email)
+    fi
+done
+#output the emails on each line. Could be redirected into a file.
+for email in ${outArray[@]}; do
+    echo $email
+done
